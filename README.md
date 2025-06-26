@@ -7,8 +7,9 @@ Real-time restock notifications as they occur.
 Fully open-source and available for community use and contribution.
 
 # 💿 Urls/Links
-soon
+[GetStock](https://growagarden-api.vercel.app/api/Getstock)
+[GetWeather](https://growagarden-api.vercel.app/api/Getweather)
+[RestockTime](https://growagarden-api.vercel.app/api/restock-time)
 
-
-**This will not revice any updates**
+# This will not revice any updates
 [Original Code](https://github.com/Just3itx/Grow-A-Garden-API)
