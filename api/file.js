@@ -1,10 +1,9 @@
-const axios = require('axios');
-const { EmbedBuilder, AttachmentBuilder } = require('discord.js');
-const moment = require('moment-timezone');
+import React, { useEffect, useState } from 'react';
+import axios from 'axios';
+import moment from 'moment-timezone';
+import './App.css';
 
-const activeSessions = new Map();
-
-const GIF_PATH = './assets/gagstock.gif'; // Make sure to put your gif here
+const GIF_URL = '/gagstock.gif'; // Place gagstock.gif in public folder
 
 function formatCountdown(updatedAt, intervalSec) {
   const now = Date.now();
@@ -27,34 +26,44 @@ function getHoneyRestockCountdown() {
   return `${m}m ${s}s`;
 }
 
-async function fetchStockData() {
-  const [
-    gearSeedRes,
-    eggRes,
-    weatherRes,
-    honeyRes,
-    cosmeticsRes,
-    seedsEmojiRes
-  ] = await Promise.all([
-    axios.get("https://growagardenstock.com/api/stock?type=gear-seeds"),
-    axios.get("https://growagardenstock.com/api/stock?type=egg"),
-    axios.get("https://growagardenstock.com/api/stock/weather"),
-    axios.get("http://65.108.103.151:22377/api/stocks?type=honeyStock"),
-    axios.get("https://growagardenstock.com/api/special-stock?type=cosmetics"),
-    axios.get("http://65.108.103.151:22377/api/stocks?type=seedsStock")
-  ]);
+function App() {
+  const [data, setData] = useState(null);
+  const [lastUpdated, setLastUpdated] = useState('');
 
-  return {
-    gearSeed: gearSeedRes.data,
-    egg: eggRes.data,
-    weather: weatherRes.data,
-    honey: honey.data,
-    cosmetics: cosmeticsRes.data,
-    emojiSeeds: seedsEmojiRes.data?.seedsStock || []
+  const fetchData = async () => {
+    try {
+      const [gearSeed, egg, weather, honey, cosmetics, emojiSeeds] = await Promise.all([
+        axios.get("https://growagardenstock.com/api/stock?type=gear-seeds"),
+        axios.get("https://growagardenstock.com/api/stock?type=egg"),
+        axios.get("https://growagardenstock.com/api/stock/weather"),
+        axios.get("http://65.108.103.151:22377/api/stocks?type=honeyStock"),
+        axios.get("https://growagardenstock.com/api/special-stock?type=cosmetics"),
+        axios.get("http://65.108.103.151:22377/api/stocks?type=seedsStock")
+      ]);
+
+      setData({
+        gearSeed: gearSeed.data,
+        egg: egg.data,
+        weather: weather.data,
+        honey: honey.data,
+        cosmetics: cosmetics.data,
+        emojiSeeds: emojiSeeds.data?.seedsStock || []
+      });
+
+      setLastUpdated(moment().tz('Asia/Manila').format('hh:mm:ss A'));
+    } catch (err) {
+      console.error("Error fetching data:", err);
+    }
   };
-}
 
-function createEmbed(data, lastUpdated) {
+  useEffect(() => {
+    fetchData();
+    const interval = setInterval(fetchData, 10000);
+    return () => clearInterval(interval);
+  }, []);
+
+  if (!data) return <div className="text-center p-10 text-white">Loading stock data...</div>;
+
   const { gearSeed, egg, weather, honey, cosmetics, emojiSeeds } = data;
 
   const gearRestock = formatCountdown(gearSeed.updatedAt, 300);
@@ -69,147 +78,58 @@ function createEmbed(data, lastUpdated) {
     const emoji = matched?.emoji || "";
     return `- ${emoji ? `${emoji} ` : ""}${seed}`;
   }).join("\n") || "No seeds.";
+
   const eggList = egg.egg?.map(item => `- ${item}`).join("\n") || "No eggs.";
   const cosmeticsList = cosmetics.cosmetics?.map(item => `- ${item}`).join("\n") || "No cosmetics.";
   const honeyList = honey.honeyStock?.map(h => `- ${h.name}: ${h.value}`).join("\n") || "No honey stock.";
 
-  const weatherIcon = weather.icon || "🌦️";
-  const weatherCurrent = weather.currentWeather || "Unknown";
-  const cropBonus = weather.cropBonuses || "None";
+  return (
+    <div className="min-h-screen bg-gray-900 text-white p-4 font-mono relative overflow-hidden">
+      <img
+        src={GIF_URL}
+        alt="Banner"
+        className="w-full max-h-60 object-cover rounded-xl shadow mb-4 border border-green-400"
+      />
+      <h1 className="text-3xl font-bold text-green-400 mb-4 text-center">🌾 Grow A Garden — Stock Tracker</h1>
 
-  const embed = new EmbedBuilder()
-    .setTitle("🌾 Grow A Garden — Stock Tracker")
-    .setColor(0x6A9955)
-    .addFields(
-      { name: "🛠️ Gear", value: gearList, inline: true },
-      { name: "🌱 Seeds", value: seedList, inline: true },
-      { name: "🥚 Eggs", value: eggList, inline: true },
-      { name: "🎨 Cosmetics", value: cosmeticsList + `\n⏳ Restock in: ${cosmeticsRestock}`, inline: false },
-      { name: "🍯 Honey Stock", value: honeyList + `\n⏳ Restock in: ${honeyRestock}`, inline: false },
-      { name: "🌤️ Weather", value: `${weatherIcon} ${weatherCurrent}`, inline: true },
-      { name: "🪴 Crop Bonus", value: cropBonus, inline: true },
-      { name: "⏳ Gear/Seed Restock", value: gearRestock, inline: true },
-      { name: "⏳ Egg Restock", value: eggRestock, inline: true }
-    )
-    .setFooter({ text: `Created by Sunnel | Last Updated: ${lastUpdated}` });
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
+        <div className="bg-gray-800 p-4 rounded-xl">
+          <h2 className="text-lg font-semibold">🛠️ Gear</h2>
+          <pre>{gearList}</pre>
+        </div>
+        <div className="bg-gray-800 p-4 rounded-xl">
+          <h2 className="text-lg font-semibold">🌱 Seeds</h2>
+          <pre>{seedList}</pre>
+        </div>
+        <div className="bg-gray-800 p-4 rounded-xl">
+          <h2 className="text-lg font-semibold">🥚 Eggs</h2>
+          <pre>{eggList}</pre>
+        </div>
+        <div className="bg-gray-800 p-4 rounded-xl">
+          <h2 className="text-lg font-semibold">🎨 Cosmetics</h2>
+          <pre>{cosmeticsList}</pre>
+          <p className="mt-2 text-yellow-300">⏳ Restock in: {cosmeticsRestock}</p>
+        </div>
+        <div className="bg-gray-800 p-4 rounded-xl">
+          <h2 className="text-lg font-semibold">🍯 Honey Stock</h2>
+          <pre>{honeyList}</pre>
+          <p className="mt-2 text-yellow-300">⏳ Restock in: {honeyRestock}</p>
+        </div>
+        <div className="bg-gray-800 p-4 rounded-xl">
+          <h2 className="text-lg font-semibold">🌤️ Weather</h2>
+          <p>{weather.icon || '🌦️'} {weather.currentWeather || 'Unknown'}</p>
+          <h3 className="mt-2">🪴 Crop Bonus:</h3>
+          <p>{weather.cropBonuses || 'None'}</p>
+        </div>
+      </div>
 
-  return embed;
+      <div className="mt-6 text-center text-green-400">
+        <p>⏳ Gear/Seed Restock: {gearRestock}</p>
+        <p>⏳ Egg Restock: {eggRestock}</p>
+        <p className="mt-2">🕒 Last Updated: {lastUpdated} (Asia/Manila)</p>
+      </div>
+    </div>
+  );
 }
 
-async function startTracking(channel, userId) {
-  if (activeSessions.has(userId)) {
-    return channel.send("📡 You're already tracking GAG stock! Use `!gagstock off` to stop.");
-  }
-
-  channel.send("✅ Started tracking Grow A Garden stock. Updates every 10 seconds!");
-
-  const session = {
-    interval: null,
-    lastCombinedKey: null,
-  };
-
-  session.interval = setInterval(async () => {
-    try {
-      const data = await fetchStockData();
-
-      const combinedKey = JSON.stringify({
-        gear: data.gearSeed.gear,
-        seeds: data.gearSeed.seeds,
-        egg: data.egg.egg,
-        weather: data.weather.updatedAt,
-        honeyStock: data.honey.honeyStock,
-        cosmetics: data.cosmetics.cosmetics
-      });
-
-      if (combinedKey === session.lastCombinedKey) return;
-      session.lastCombinedKey = combinedKey;
-
-      const lastUpdated = moment().tz('Asia/Manila').format('hh:mm:ss A');
-
-      const embed = createEmbed(data, lastUpdated);
-      const gif = new AttachmentBuilder(GIF_PATH);
-
-      await channel.send({ embeds: [embed], files: [gif] });
-    } catch (err) {
-      console.error("Error fetching GAG stock:", err);
-    }
-  }, 10000);
-
-  activeSessions.set(userId, session);
-}
-
-function stopTracking(channel, userId) {
-  const session = activeSessions.get(userId);
-  if (!session) return channel.send("⚠️ You don't have an active GAG stock tracking session.");
-
-  clearInterval(session.interval);
-  activeSessions.delete(userId);
-  return channel.send("🛑 Stopped tracking Grow A Garden stock.");
-}
-
-module.exports = {
-  name: 'gagstock',
-  description: 'Track Grow A Garden stock with auto updates.',
-  options: [
-    {
-      name: 'action',
-      type: 3, // STRING
-      description: 'Use "on" to start or "off" to stop tracking',
-      required: true,
-      choices: [
-        { name: 'on', value: 'on' },
-        { name: 'off', value: 'off' },
-      ],
-    },
-  ],
-  async execute(interactionOrMessage, args) {
-    const isInteraction = interactionOrMessage.isChatInputCommand?.() ?? false;
-
-    // Channel & userId extraction
-    const channel = isInteraction ? interactionOrMessage.channel : interactionOrMessage.channel;
-    const userId = isInteraction ? interactionOrMessage.user.id : interactionOrMessage.author.id;
-
-    let action;
-    if (isInteraction) {
-      action = interactionOrMessage.options.getString('action');
-    } else {
-      action = args[0]?.toLowerCase();
-    }
-
-    if (action === 'off') {
-      if (isInteraction) {
-        await stopTracking(channel, userId);
-        await interactionOrMessage.reply({ content: '🛑 GAG stock tracking stopped.', ephemeral: true });
-      } else {
-        await stopTracking(channel, userId);
-      }
-      return;
-    }
-
-    if (action !== 'on') {
-      const usageMsg = '📌 Usage:\n• `!gagstock on` to start tracking\n• `!gagstock off` to stop tracking';
-      if (isInteraction) {
-        await interactionOrMessage.reply({ content: usageMsg, ephemeral: true });
-      } else {
-        await channel.send(usageMsg);
-      }
-      return;
-    }
-
-    if (activeSessions.has(userId)) {
-      const alreadyMsg = "📡 You're already tracking GAG stock! Use `!gagstock off` to stop.";
-      if (isInteraction) {
-        await interactionOrMessage.reply({ content: alreadyMsg, ephemeral: true });
-      } else {
-        await channel.send(alreadyMsg);
-      }
-      return;
-    }
-
-    await startTracking(channel, userId);
-
-    if (isInteraction) {
-      await interactionOrMessage.reply({ content: '✅ GAG stock tracking started! Updates every 10 seconds.', ephemeral: true });
-    }
-  }
-};
+export default App;
