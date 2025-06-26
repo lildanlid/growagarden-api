@@ -10,7 +10,7 @@ const options = {
     "accept-language": "en-US,en;q=0.9",
     "content-type": "application/json",
     priority: "u=1, i",
-    referer: "https://growagarden.gg/stocks",
+    referer: "https://growagarden.gg/stocks", 
     "trpc-accept": "application/json",
     "x-trpc-source": "gag"
   }
