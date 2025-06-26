@@ -11,7 +11,7 @@ function calculateRestockTimes() {
     return new Date(timestamp).toLocaleString('en-US', {
       hour: 'numeric', 
       minute: '2-digit',
-      hour12: true,
+      hour12: true, 
       timeZone: timezone
     });
   }
