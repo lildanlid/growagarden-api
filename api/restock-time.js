@@ -9,7 +9,7 @@ function calculateRestockTimes() {
 
   function formatTime(timestamp) {
     return new Date(timestamp).toLocaleString('en-US', {
-      hour: 'numeric',
+      hour: 'numeric', 
       minute: '2-digit',
       hour12: true,
       timeZone: timezone
