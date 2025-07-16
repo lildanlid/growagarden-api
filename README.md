@@ -10,6 +10,3 @@
 - [GetStock](https://growagarden-api.vercel.app/api/Getstock)
 - [GetWeather](https://growagarden-api.vercel.app/api/Getweather)
 - [RestockTime](https://growagarden-api.vercel.app/api/restock-time)
-
-# This will not revice any updates
-[Original Code](https://github.com/Just3itx/Grow-A-Garden-API)
