@@ -20,10 +20,7 @@ function fetchStocks() {
     return new Promise((resolve, reject) => {
         const req = https.request(options, (res) => {
             const chunks = [];
-            res.on("data", (chunk) => {
-                chunks.push(chunk);
-            });
-
+            res.on("data", (chunk) => chunks.push(chunk));
             res.on("end", () => {
                 try {
                     const body = Buffer.concat(chunks);
@@ -35,17 +32,14 @@ function fetchStocks() {
             });
         });
 
-        req.on("error", (e) => {
-            reject(e);
-        });
-
+        req.on("error", (e) => reject(e));
+        req.setTimeout(10000, () => req.destroy(new Error("Request timed out")));
         req.end();
     });
 }
 
 function formatStockItems(items, imageData) {
     if (!Array.isArray(items) || items.length === 0) return [];
-
     return items.map(item => {
         const image = imageData?.[item.name] || null;
         return {
@@ -58,7 +52,6 @@ function formatStockItems(items, imageData) {
 
 function formatLastSeenItems(items, imageData) {
     if (!Array.isArray(items) || items.length === 0) return [];
-
     return items.map(item => {
         const image = imageData?.[item.name] || null;
         return {
@@ -72,7 +65,6 @@ function formatLastSeenItems(items, imageData) {
 
 function formatStocks(stocks) {
     const imageData = stocks.imageData || {};
-
     return {
         easterStock: formatStockItems(stocks.easterStock, imageData),
         gearStock: formatStockItems(stocks.gearStock, imageData),
@@ -81,7 +73,6 @@ function formatStocks(stocks) {
         honeyStock: formatStockItems(stocks.honeyStock, imageData),
         cosmeticsStock: formatStockItems(stocks.cosmeticsStock, imageData),
         seedsStock: formatStockItems(stocks.seedsStock, imageData),
-
         lastSeen: {
             Seeds: formatLastSeenItems(stocks.lastSeen?.Seeds, imageData),
             Gears: formatLastSeenItems(stocks.lastSeen?.Gears, imageData),
@@ -89,7 +80,6 @@ function formatStocks(stocks) {
             Eggs: formatLastSeenItems(stocks.lastSeen?.Eggs, imageData),
             Honey: formatLastSeenItems(stocks.lastSeen?.Honey, imageData)
         },
-
         restockTimers: stocks.restockTimers || {},
     };
 }
@@ -99,24 +89,22 @@ async function FetchStockData() {
         const data = await fetchStocks();
         return formatStocks(data);
     } catch (err) {
-        console.error("Error fetching stock data:", err);
+        console.error("Error fetching stock data:", err.message);
         return null;
     }
 }
 
-function register(app) {
-    app.get('/api/stock/GetStock', async (req, res) => {
-        try {
-            const stockData = await FetchStockData();
-            if (!stockData) {
-                res.status(500).json({ error: "Failed to fetch stock data" });
-                return;
-            }
-            res.json(stockData);
-        } catch (err) {
-            res.status(500).json({ error: "Error fetching stock data" });
-        }
-    });
-}
+export default async function handler(req, res) {
+    if (req.method !== "GET") {
+        return res.status(405).json({ error: "Method not allowed" });
+    }
 
-module.exports = { register };
+    const stockData = await FetchStockData();
+
+    if (!stockData) {
+        return res.status(500).json({ error: "Failed to fetch stock data" });
+    }
+
+    res.setHeader("Cache-Control", "s-maxage=60, stale-while-revalidate");
+    res.status(200).json(stockData);
+}
